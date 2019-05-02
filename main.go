@@ -12,8 +12,9 @@ import (
 )
 
 var (
-	flagURL = flag.String("tokens", "http://localhost/tokens/list", "tokens url")
-	flagDir = flag.String("root", "/mnt/streams", "ts files root directory")
+	flagURL  = flag.String("tokens", "http://localhost/tokens/list", "tokens url")
+	flagDir  = flag.String("root", "/mnt/streams", "ts files root directory")
+	flagBind = flag.String("bind", "127.0.0.1:8000", "bind on host:port")
 
 	mu     = &sync.RWMutex{}
 	tokens = make(map[string]string)
@@ -29,7 +30,7 @@ func main() {
 	fs := http.FileServer(http.Dir(*flagDir))
 	http.Handle("/", mh(fs))
 
-	http.ListenAndServe("127.0.0.1:8000", nil)
+	http.ListenAndServe(*flagBind, nil)
 }
 
 func mh(h http.Handler) http.Handler {
