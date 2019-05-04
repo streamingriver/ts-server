@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 
 	"time"
@@ -35,14 +36,15 @@ func main() {
 
 func mh(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("token") == "" {
+		isTs := strings.HasSuffix(r.URL.String(), ".ts")
+		if r.URL.Query().Get("token") == "" && !isTs {
 			http.NotFound(w, r)
 			return
 		}
 		mu.RLock()
 		_, ok := tokens[r.URL.Query().Get("token")]
 		mu.RUnlock()
-		if !ok {
+		if !ok && !isTs {
 			http.NotFound(w, r)
 			return
 		}
