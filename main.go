@@ -81,7 +81,9 @@ func mh_v2(h http.Handler) http.Handler {
 		remote_ip := strings.Split(r.RemoteAddr, ":")[0]
 		isTs := strings.HasSuffix(r.URL.String(), ".ts")
 		if isTs && remote_ip == *flagFE {
+			mu.RLock()
 			_, ok := tokens2.ADDR[r.Header.Get("X-Forwarded-For")]
+			mu.RUnlock()
 			if !ok {
 				http.NotFound(w, r)
 				return
@@ -107,7 +109,9 @@ func mh_v2(h http.Handler) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
+		mu.RLock()
 		ch, ok := tokens2.CH[r.URL.Query().Get("token")]
+		mu.RUnlock()
 		if !ok && !isTs {
 			http.NotFound(w, r)
 			return
