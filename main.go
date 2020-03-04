@@ -6,18 +6,22 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 
 	"time"
+
+	"net/http/httputil"
 )
 
 var (
-	flagURL  = flag.String("tokens", "http://localhost/tokens/list", "tokens url")
-	flagDir  = flag.String("root", "/mnt/streams", "ts files root directory")
-	flagBind = flag.String("bind", "127.0.0.1:8000", "bind on host:port")
-	flagV2   = flag.Bool("v2", false, "-v2")
-	flagFE   = flag.String("fe", "127.0.0.1", "-fe 127.0.0.1")
+	flagURL     = flag.String("tokens", "http://localhost/tokens/list", "tokens url")
+	flagDir     = flag.String("root", "/mnt/streams", "ts files root directory")
+	flagBind    = flag.String("bind", "127.0.0.1:8000", "bind on host:port")
+	flagV2      = flag.Bool("v2", false, "-v2")
+	flagFE      = flag.String("fe", "127.0.0.1", "-fe 127.0.0.1")
+	flagBackend = flag.String("backend", "", "proxy to")
 
 	mu     = &sync.RWMutex{}
 	tokens = make(map[string]string)
@@ -41,10 +45,21 @@ func main() {
 	go updateTokens()
 
 	fs := http.FileServer(http.Dir(*flagDir))
+
+	if *flagBackend != "" {
+		url, err := url.Parse(*flagBackend)
+		if err != nil {
+			panic(err)
+		}
+		fs = httputil.NewSingleHostReverseProxy(url)
+		log.Printf("Proxying")
+	}
+
 	mh := mh_v1
 	if *flagV2 {
 		mh = mh_v2
 	}
+	_ = mh
 	http.Handle("/", mh(fs))
 
 	http.HandleFunc("/reload", func(w http.ResponseWriter, r *http.Request) {
@@ -55,6 +70,7 @@ func main() {
 		}
 	})
 
+	log.Printf("Sarting server on %s", *flagBind)
 	http.ListenAndServe(*flagBind, nil)
 }
 
